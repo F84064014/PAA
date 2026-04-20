@@ -1,21 +1,70 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QGroupBox, QCheckBox,
-    QScrollArea, QGridLayout
+    QScrollArea, QGridLayout, QHBoxLayout, QComboBox
 )
 import numpy as np
 
 class AttributeLabel(QScrollArea):
-    def __init__(self, attributes):
+    def __init__(self, attributes: list[str], splits: list[str]):
         super().__init__()
+        container:          QWidget               = QWidget()
+        self.layout:        QVBoxLayout           = QVBoxLayout(container)
+        self.cbs:           dict[str, QCheckBox]  = {}
+        self.split_combo:   QComboBox             = None
+        self.index_cbs:     list[QCheckBox]       = [None] * len(attributes)
+        self.cols:          int                   = 4
+
         self.setWidgetResizable(True)
 
-        container:      QWidget               = QWidget()
-        self.layout:    QVBoxLayout           = QVBoxLayout(container)
-        self.cbs:       dict[str, QCheckBox]  = {}
-        self.index_cbs: list[QCheckBox]       = [None] * len(attributes)
-        self.cols:      int                   = 4
+        for group_box in self.build_attributes_cbs(attributes):
+            self.layout.addWidget(group_box)
+        self.layout.addWidget(self.build_split_selector(splits))
 
+        self.layout.addStretch()
+        self.setWidget(container)
+
+    def getAttributesGroup(self, attributes: list[str]):
+        grouped_attributes = dict()
+        for idx, attribute in enumerate(attributes):
+            group, attr = attribute.rsplit('-', 1)
+            if group not in grouped_attributes:
+                grouped_attributes[group] = list()
+            grouped_attributes[group].append((idx, attr))
+        return grouped_attributes
+    
+    def loadLabel(self, label: np.ndarray, split: str):
+        for l, cb in zip(label, self.index_cbs):
+            cb.setChecked(l > 0)
+        self.split_combo.setCurrentText(split)
+
+    def getLabel(self) -> tuple[np.ndarray, str]:
+        label = np.array([cb.isChecked() for cb in self.index_cbs], dtype=int)
+        split = self.split_combo.currentText()
+        return (label, split)
+
+    def setCheckboxStyle(self, name: str, cb: QCheckBox):
+        if name in ['Black', 'Blue', 'Brown', 'Green',
+                    'Grey', 'Orange', 'Pink', 'Purple',
+                    'Red', 'White', 'Yellow']:
+            cb.setStyleSheet(f"""QCheckBox{{
+                                background-color: {name};
+                                font-weight: bold;
+                                color: {'White' if name in ['Black'] else 'Black'}
+                             }}""")
+
+    def build_split_selector(self, splits: list[str]) -> QGroupBox:
+        box = QGroupBox("Partition")
+        layout = QHBoxLayout(box)
+
+        self.split_combo = QComboBox()
+        self.split_combo.addItems(splits)
+
+        layout.addWidget(self.split_combo)
+        return box
+
+    def build_attributes_cbs(self, attributes: list[str]) -> list[QGroupBox]:
+        group_boxes = []
         grouped_attributes = self.getAttributesGroup(attributes)
         for group_name, attr_list in grouped_attributes.items():
             group_box = QGroupBox(group_name)
@@ -33,33 +82,8 @@ class AttributeLabel(QScrollArea):
                 group_layout.addWidget(cb, row, col)
 
             group_box.setLayout(group_layout)
-            self.layout.addWidget(group_box)
-
-        self.layout.addStretch()
-        self.setWidget(container)
-
-    def getAttributesGroup(self, attributes: list[str]):
-        grouped_attributes = dict()
-        for idx, attribute in enumerate(attributes):
-            group, attr = attribute.rsplit('-', 1)
-            if group not in grouped_attributes:
-                grouped_attributes[group] = list()
-            grouped_attributes[group].append((idx, attr))
-        return grouped_attributes
-    
-    def loadLabel(self, arr: np.ndarray):
-        for l, cb in zip(arr, self.index_cbs):
-            cb.setChecked(l > 0)
-
-    def setCheckboxStyle(self, name: str, cb: QCheckBox):
-        if name in ['Black', 'Blue', 'Brown', 'Green',
-                    'Grey', 'Orange', 'Pink', 'Purple',
-                    'Red', 'White', 'Yellow']:
-            cb.setStyleSheet(f"""QCheckBox{{
-                                background-color: {name};
-                                font-weight: bold;
-                                color: {'White' if name in ['Black'] else 'Black'}
-                             }}""")
+            group_boxes.append(group_box)
+        return group_boxes
 
     @property
     def label_array(self) -> np.ndarray:

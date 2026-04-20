@@ -26,8 +26,8 @@ class Annotator(QWidget):
         self.setFixedSize(1000, 800)
 
         # Loading dataset
-        self.dataset = load_data("data/dataset_all.pkl")
-        # self.dataset = load_data("data/2026_04_18_19_26_temp.csv")
+        # self.dataset = load_data("data/UPAR_bigender.pth")
+        self.dataset = load_data("data/UPAR_bigender.csv")
 
         self.imageLabel     :ImageLabel
         self.attributeLabel :AttributeLabel
@@ -35,7 +35,7 @@ class Annotator(QWidget):
         self.index_edit = QLineEdit(str(0))
         self.index_edit.setFixedWidth(50)
         self.index_edit.setStyleSheet("color: white; background-color: #3b3b3b;")
-        self.index_edit.returnPressed.connect(self.load_image)
+        self.index_edit.returnPressed.connect(self.jump_image)
 
         self.total_label = QLabel(f" / {len(self.dataset)}")
         self.total_label.setStyleSheet("color: white;")
@@ -52,24 +52,36 @@ class Annotator(QWidget):
 
         self.setLayout(main_layout)
 
+        self._cur_index = 0
         self.load_image()
 
     @property
     def cur_index(self):
-        return int(self.index_edit.text())
+        return self._cur_index
 
     @cur_index.setter
-    def cur_index(self, value: int):
-        value = min(max(value, 0), len(self.dataset)-1)
-        self.index_edit.setText(str(value))
+    def cur_index(self, value):
+        if isinstance(value, str) and str.isdigit(value):
+            value = int(value)
+        self._cur_index = min(max(value, 0), len(self.dataset)-1)
+        self.index_edit.setText(str(self._cur_index))
+
+    def jump_image(self):
+        self.save_image()
+        self.cur_index = self.index_edit.text()
+        self.load_image()
 
     def load_image(self):
-        if self.cur_index < 0:
-            self.cur_index = 0
-        if self.cur_index >= len(self.dataset):
-            self.cur_index = len(self.dataset)-1
         self.imageLabel.loadImage(self.dataset.get_image(self.cur_index))
-        self.attributeLabel.loadLabel(self.dataset.labels[self.cur_index])
+        self.attributeLabel.loadLabel(
+            self.dataset.get_label(self.cur_index),
+            self.dataset.get_split(self.cur_index),
+        )
+
+    def save_image(self):
+        label, split = self.attributeLabel.getLabel()
+        self.dataset.set_label(self._cur_index, label)
+        self.dataset.set_split(self._cur_index, split)
 
     def save_dataset(self):
         timestamp = datetime.now().strftime("%Y_%m%d_%H%M")
@@ -77,9 +89,11 @@ class Annotator(QWidget):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_N:
+            self.save_image()
             self.cur_index += 1
             self.load_image()
         if event.key() == Qt.Key.Key_U:
+            self.save_image()
             self.cur_index -= 1
             self.load_image()
         if event.key() == Qt.Key.Key_S:
@@ -88,7 +102,10 @@ class Annotator(QWidget):
     def buildImageAndAttribute(self) -> QHBoxLayout:
 
         self.imageLabel     = ImageLabel()
-        self.attributeLabel = AttributeLabel(self.dataset.attriubte_names)
+        self.attributeLabel = AttributeLabel(
+            self.dataset.attriubte_names,
+            self.dataset.splits_name,
+        )
 
         layout = QHBoxLayout()
         layout.addWidget(self.imageLabel)

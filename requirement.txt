@@ -2,3 +2,4 @@ easydict
 torch
 torchvision
 PyQt6
+tqdm
