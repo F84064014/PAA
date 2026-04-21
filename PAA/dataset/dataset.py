@@ -1,8 +1,6 @@
-import torch
 import numpy as np
 from pathlib import Path
 
-import tqdm
 import pickle
 import easydict
 
@@ -16,6 +14,7 @@ class PAADataset:
         self.images      : list[str]  = None
         self.splits      : np.ndarray = None
         self.splits_name : list[str]  = None
+        self.splits_n2i  : dict[str, int] = None
 
         # Load data
         loader = {
@@ -25,7 +24,19 @@ class PAADataset:
         }
         loader[self.path.suffix](self.path.as_posix())
 
+        # For data cleaning
+        if not "redundant" in self.splits_name:
+            self.splits_name.append("redundant")
+            self.splits_n2i["redundant"] = len(self.splits_n2i)
+        if not "low_quality" in self.splits_name:
+            self.splits_name.append("low_quality")
+            self.splits_n2i["low_quality"] = len(self.splits_n2i)
+        if not "ambiguous" in self.splits_name:
+            self.splits_name.append("ambiguous")
+            self.splits_n2i["ambiguous"] = len(self.splits_n2i)
+
     def load_pth(self, path):
+        import torch
         meta = torch.load(path, weights_only=False)
         self.attributes = meta['attr_name']
         self.labels = meta['label']
@@ -33,9 +44,11 @@ class PAADataset:
 
         self.splits = np.empty(len(self.labels), dtype=int)
         self.splits_name = list()
+        self.splits_n2i  = dict()
         for split, indices in meta['partition'].items():
             self.splits_name.append(split)
             self.splits[indices] = len(self.splits_name)-1
+            self.splits_n2i[split] = len(self.splits_n2i)
 
     def load_pkl(self, path):
         with open(path, 'rb') as f:
@@ -81,6 +94,7 @@ class PAADataset:
         print("Validating PAADataset done")
 
     def save_pth(self, path):
+        import torch
         partition = dict()
         for i, n in enumerate(self.splits_name):
             partition[n] = np.where(self.splits==i)[0]
@@ -106,7 +120,10 @@ class PAADataset:
             f.write('\n'.join([colnames] + rows))
 
     def get_image(self, index=0) -> str:
-        return (self.root / self.images[index]).as_posix()
+        if Path(self.images[index]).exists():
+            return self.images[index]
+        else:
+            return (self.root / self.images[index]).as_posix()
     
     def get_split(self, index=0) -> str:
         return self.splits_name[self.splits[index]]
