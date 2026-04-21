@@ -3,13 +3,14 @@ from pathlib import Path
 
 import pickle
 import easydict
+from .attributes import Attributes
 
 class PAADataset:
     def __init__(self, path: str) -> None:
         self.path :Path = Path(path).expanduser()
         self.root :Path = self.path.parent
 
-        self.attributes  : list[str]  = None
+        self.attributes  : Attributes = None
         self.labels      : np.ndarray = None
         self.images      : list[str]  = None
         self.splits      : np.ndarray = None
@@ -38,7 +39,7 @@ class PAADataset:
     def load_pth(self, path):
         import torch
         meta = torch.load(path, weights_only=False)
-        self.attributes = meta['attr_name']
+        self.attributes = Attributes(meta['attr_name'])
         self.labels = meta['label']
         self.images = meta['image_name']
 
@@ -53,7 +54,7 @@ class PAADataset:
     def load_pkl(self, path):
         with open(path, 'rb') as f:
             meta: easydict = pickle.load(f)
-        self.attributes = meta.attr_name
+        self.attributes = Attributes(meta.attr_name)
         self.labels = meta.label
         self.images = meta.image_name
 
@@ -66,7 +67,7 @@ class PAADataset:
     def load_csv(self, path):
         text = Path(path).read_text()
         lines = text.split('\n')
-        self.attributes = lines[0].split(',')[2:]
+        self.attributes = Attributes(lines[0].split(',')[2:])
         self.labels     = np.array([list(map(int, line.split(',')[2:])) for line in lines[1:]])
 
         self.images      = list()
@@ -100,7 +101,7 @@ class PAADataset:
             partition[n] = np.where(self.splits==i)[0]
 
         meta = {
-            'attr_name':    self.attributes,
+            'attr_name':    self.attributes.list(),
             'label':        self.labels,
             'image_name':   self.images,
             'partition':    partition
@@ -108,7 +109,7 @@ class PAADataset:
         torch.save(meta, path)
 
     def save_csv(self, path):
-        colnames = ','.join(['file_path', 'split'] + self.attributes)
+        colnames = ','.join(['file_path', 'split'] + self.attributes.list())
 
         rows = list()
         for l, n, s in zip(self.labels, self.images, self.splits):
@@ -142,4 +143,4 @@ class PAADataset:
     
     @property
     def attriubte_names(self) -> list[str]:
-        return self.attributes
+        return self.attributes.list()

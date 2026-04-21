@@ -151,7 +151,7 @@ class Annotator(QWidget):
 
         self.imageLabel     = ImageLabel()
         self.attributeLabel = AttributeLabel(
-            self.dataset.attriubte_names,
+            self.dataset.attributes,
             self.dataset.splits_name,
         )
 

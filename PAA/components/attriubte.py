@@ -3,10 +3,13 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QGroupBox, QCheckBox,
     QScrollArea, QGridLayout, QHBoxLayout, QComboBox
 )
+from PAA.dataset import (
+    Attributes
+)
 import numpy as np
 
 class AttributeLabel(QScrollArea):
-    def __init__(self, attributes: list[str], splits: list[str]):
+    def __init__(self, attributes: Attributes, splits: list[str]):
         super().__init__()
         container:          QWidget               = QWidget()
         self.layout:        QVBoxLayout           = QVBoxLayout(container)
@@ -23,15 +26,6 @@ class AttributeLabel(QScrollArea):
 
         self.layout.addStretch()
         self.setWidget(container)
-
-    def getAttributesGroup(self, attributes: list[str]):
-        grouped_attributes = dict()
-        for idx, attribute in enumerate(attributes):
-            group, attr = attribute.rsplit('-', 1)
-            if group not in grouped_attributes:
-                grouped_attributes[group] = list()
-            grouped_attributes[group].append((idx, attr))
-        return grouped_attributes
     
     def loadLabel(self, label: np.ndarray, split: str):
         for l, cb in zip(label, self.index_cbs):
@@ -63,10 +57,9 @@ class AttributeLabel(QScrollArea):
         layout.addWidget(self.split_combo)
         return box
 
-    def build_attributes_cbs(self, attributes: list[str]) -> list[QGroupBox]:
+    def build_attributes_cbs(self, attributes: Attributes) -> list[QGroupBox]:
         group_boxes = []
-        grouped_attributes = self.getAttributesGroup(attributes)
-        for group_name, attr_list in grouped_attributes.items():
+        for group_name, attr_list in attributes.group():
             group_box = QGroupBox(group_name)
             group_layout = QGridLayout()
 
