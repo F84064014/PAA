@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QGroupBox, QCheckBox,
     QScrollArea, QGridLayout, QHBoxLayout, QComboBox
 )
-from PAA.dataset import (
+from PAA.backend import (
     Attributes
 )
 import numpy as np

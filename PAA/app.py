@@ -11,7 +11,7 @@ from .components import (
     ImageLabel, AttributeLabel, FilterPanel,
     ModelPanel
 )
-from .dataset import (
+from .backend import (
     load_data
 )
 from datetime import datetime
@@ -32,7 +32,7 @@ class Annotator(QWidget):
         self.setFixedSize(1000, 800)
 
         # Loading dataset
-        self.dataset = load_data("data/RealWorld_LAST.pth")
+        self.dataset = load_data("data/RealWorld_0421.pth")
         self.dataset.append_split("ignore")
 
         self.imageLabel     :ImageLabel
@@ -48,12 +48,13 @@ class Annotator(QWidget):
 
         self.filter_btn = QPushButton("Filter")
         self.filter_btn.clicked.connect(self.toggle_filter_panel)
-        self.filter_pannel = FilterPanel(self.dataset.attributes)
+        self.filter_pannel = FilterPanel(
+            self.dataset.attributes, self.dataset.split_names)
 
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/demo_models/par/shufflenetv2_1.0_finetune4.onnx", self.dataset.attributes)
+            "../PAR/demo_models/par/shufflenetv2_1.0_finetune4_2.onnx", self.dataset.attributes)
 
         top_layout = QHBoxLayout()
         top_layout.addStretch()
@@ -88,10 +89,13 @@ class Annotator(QWidget):
         init_index = self._cur_index
         self._cur_index += step
 
-        f = self.filter_pannel.mask
+        cond_f = self.filter_pannel.mask
+        cond_s = self.filter_pannel.split
+
         while self._cur_index >= 0 and self._cur_index < len(self.dataset):
             l = self.dataset.get_label(self._cur_index)
-            if (np.logical_and(l, f) == f).all():
+            s = self.dataset.get_split(self._cur_index)
+            if (np.logical_and(l, cond_f) == cond_f).all() and (s in cond_s):
                 self.cur_index = self._cur_index # Update UI
                 return
             self._cur_index += step
@@ -112,7 +116,8 @@ class Annotator(QWidget):
 
     def load_predict(self):
         self.model_pannel.updatePredict(
-            self.dataset.get_image(self.cur_index))
+            self.dataset.get_image(self.cur_index),
+            self.dataset.get_label(self.cur_index))
 
     def save_image(self, force_split=None):
         label, split = self.attributeLabel.getLabel()

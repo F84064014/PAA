@@ -132,11 +132,15 @@ class PAADataset:
             self.splits_name.append(split)
             self.splits_n2i[split] = len(self.splits_n2i)
         else:
-            raise RuntimeError(f"split {split} already exist")
+            print(f"[Warning] split {split} already exist")
 
 
     def __len__(self) -> int:
         return len(self.images)
+    
+    @property
+    def split_names(self) -> list[str]:
+        return self.splits_name
     
     @property
     def attriubte_names(self) -> list[str]:
