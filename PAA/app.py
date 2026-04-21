@@ -2,10 +2,14 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget, QLineEdit, QPushButton,
     QLabel, QHBoxLayout, QVBoxLayout,
-    QApplication
+    QApplication, QMenuBar
+)
+from PyQt6.QtGui import (
+    QAction
 )
 from .components import (
-    ImageLabel, AttributeLabel, FilterPanel
+    ImageLabel, AttributeLabel, FilterPanel,
+    ModelPanel
 )
 from .dataset import (
     load_data
@@ -29,6 +33,7 @@ class Annotator(QWidget):
 
         # Loading dataset
         self.dataset = load_data("data/RealWorld_LAST.pth")
+        self.dataset.append_split("ignore")
 
         self.imageLabel     :ImageLabel
         self.attributeLabel :AttributeLabel
@@ -45,14 +50,21 @@ class Annotator(QWidget):
         self.filter_btn.clicked.connect(self.toggle_filter_panel)
         self.filter_pannel = FilterPanel(self.dataset.attributes)
 
+        self.model_btn = QPushButton("Model")
+        self.model_btn.clicked.connect(self.toggle_model_panel)
+        self.model_pannel = ModelPanel(
+            "../PAR/demo_models/par/shufflenetv2_1.0_finetune4.onnx", self.dataset.attributes)
+
         top_layout = QHBoxLayout()
         top_layout.addStretch()
         top_layout.addWidget(self.index_edit)
         top_layout.addWidget(self.total_label)
         top_layout.addWidget(self.filter_btn)
+        top_layout.addWidget(self.model_btn)
         top_layout.addStretch()
 
         main_layout = QVBoxLayout()
+        main_layout.setMenuBar(self.buildMenuBar())
         main_layout.addLayout(top_layout)
         main_layout.addLayout(self.buildImageAndAttribute())
 
@@ -98,6 +110,10 @@ class Annotator(QWidget):
             self.dataset.get_split(self.cur_index),
         )
 
+    def load_predict(self):
+        self.model_pannel.updatePredict(
+            self.dataset.get_image(self.cur_index))
+
     def save_image(self, force_split=None):
         label, split = self.attributeLabel.getLabel()
         if force_split: split = force_split
@@ -106,7 +122,12 @@ class Annotator(QWidget):
 
     def save_dataset(self):
         timestamp = datetime.now().strftime("%Y_%m%d_%H%M")
-        self.dataset.save_csv(f"{timestamp}_temp.csv")
+        if self.save_csv_action.isChecked():
+            self.dataset.save_csv(f"{timestamp}_temp.csv")
+        elif self.save_pth_action.isChecked():
+            self.dataset.save_pth(f"{timestamp}_temp.pth")
+        else:
+            print("[ERROR] No save format selected")
 
     def toggle_filter_panel(self):
         if self.filter_pannel.isVisible():
@@ -117,15 +138,27 @@ class Annotator(QWidget):
             self.filter_pannel.move(pos)
             self.filter_pannel.show()
 
+    def toggle_model_panel(self):
+        self.load_predict()
+        if self.model_pannel.isVisible():
+            self.model_pannel.hide()
+        else:
+            pos = self.model_btn.mapToGlobal(
+                self.model_btn.rect().bottomLeft())
+            self.model_pannel.move(pos)
+            self.model_pannel.show()
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_F:
             self.save_image()
             self.find_next(step=1)
             self.load_image()
+            self.load_predict()
         if event.key() == Qt.Key.Key_D:
             self.save_image()
             self.find_next(step=-1)
             self.load_image()
+            self.load_predict()
         if event.key() == Qt.Key.Key_S:
             self.save_dataset()
         if event.key() == Qt.Key.Key_Q:
@@ -161,5 +194,23 @@ class Annotator(QWidget):
 
         return layout
 
-    def buildMenuBar():
-        pass
+    def buildMenuBar(self):
+        menubar = QMenuBar()
+
+        file_menu = menubar.addMenu("File")
+
+        self.save_csv_action = QAction(".csv", self)
+        self.save_csv_action.setCheckable(True)
+        self.save_csv_action.setChecked(False)
+        self.save_csv_action.triggered.connect(
+            lambda x: self.save_pth_action.setChecked(False))
+        file_menu.addAction(self.save_csv_action)
+
+        self.save_pth_action = QAction(".pth", self)
+        self.save_pth_action.setCheckable(True)
+        self.save_pth_action.setChecked(True)
+        self.save_pth_action.triggered.connect(
+            lambda x: self.save_csv_action.setChecked(False))
+        file_menu.addAction(self.save_pth_action)
+
+        return menubar

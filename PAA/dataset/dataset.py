@@ -25,17 +25,6 @@ class PAADataset:
         }
         loader[self.path.suffix](self.path.as_posix())
 
-        # For data cleaning
-        if not "redundant" in self.splits_name:
-            self.splits_name.append("redundant")
-            self.splits_n2i["redundant"] = len(self.splits_n2i)
-        if not "low_quality" in self.splits_name:
-            self.splits_name.append("low_quality")
-            self.splits_n2i["low_quality"] = len(self.splits_n2i)
-        if not "ambiguous" in self.splits_name:
-            self.splits_name.append("ambiguous")
-            self.splits_n2i["ambiguous"] = len(self.splits_n2i)
-
     def load_pth(self, path):
         import torch
         meta = torch.load(path, weights_only=False)
@@ -137,6 +126,14 @@ class PAADataset:
 
     def set_split(self, index, split: str) -> None:
         self.splits[index] = self.splits_n2i[split]
+
+    def append_split(self, split: str) -> None:
+        if not split in self.splits_name:
+            self.splits_name.append(split)
+            self.splits_n2i[split] = len(self.splits_n2i)
+        else:
+            raise RuntimeError(f"split {split} already exist")
+
 
     def __len__(self) -> int:
         return len(self.images)
