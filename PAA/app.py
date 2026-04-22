@@ -5,7 +5,8 @@ from PyQt6.QtWidgets import (
     QApplication, QMenuBar
 )
 from PyQt6.QtGui import (
-    QAction
+    QAction,
+    QCloseEvent
 )
 from .components import (
     ImageLabel, AttributeLabel, FilterPanel,
@@ -33,7 +34,8 @@ class Annotator(QWidget):
         self.setFixedSize(1000, 800)
 
         # Loading dataset
-        self.dataset = load_data("data/RealWorld_0421.pth")
+        # self.dataset = load_data("data/RealWorld_0421.pth")
+        self.dataset = load_data("data/RealWorld_0422.pth")
         self.dataset.append_split("ignore")
 
         self.imageLabel     :ImageLabel
@@ -55,7 +57,7 @@ class Annotator(QWidget):
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/demo_models/par/shufflenetv2_1.0_finetune4_3.onnx", self.dataset.attributes)
+            "../PAR/exp/shufflenetv2_1.0_finetune4_4/shufflenetv2_1.0_finetune4_4.onnx", self.dataset.attributes)
 
         top_layout = QHBoxLayout()
         top_layout.addStretch()
@@ -203,6 +205,10 @@ class Annotator(QWidget):
             self.find_next(step=1)
             self.load_image()
 
+    def closeEvent(self, event: QCloseEvent | None) -> None:
+        self.save_dataset()
+        event.accept()
+
     def buildImageAndAttribute(self) -> QHBoxLayout:
 
         self.imageLabel     = ImageLabel()
@@ -235,6 +241,11 @@ class Annotator(QWidget):
         self.save_pth_action.triggered.connect(
             lambda x: self.save_csv_action.setChecked(False))
         file_menu.addAction(self.save_pth_action)
+
+        self.export_action = QAction("Export", self)
+        self.export_action.triggered.connect(
+            lambda x: self.dataset.export("data/PrivateData"))
+        file_menu.addAction(self.export_action)
 
         model_menu = menubar.addMenu("Models")
 

@@ -1,6 +1,8 @@
 import numpy as np
 from pathlib import Path
 
+import copy
+import tqdm
 import pickle
 import easydict
 from .attributes import Attributes
@@ -109,6 +111,22 @@ class PAADataset:
         with open(path, 'w') as f:
             f.write('\n'.join([colnames] + rows))
 
+    def export(self, path: str):
+        from shutil import copy2
+        from pathlib import Path
+
+        root = Path(path)
+        root.mkdir(parents=True, exist_ok=False)
+
+        print(f"[INFO] Start copying data to {root}")
+        for i in tqdm.tqdm(range(self.__len__())):
+            img_path = Path(self.get_image(i))
+
+            copy2( img_path.as_posix(),
+                   (root / f'{i:08d}.jpg').as_posix())
+
+        self.save_pth(root.with_suffix('.pth').as_posix())
+
     def get_image(self, index=0) -> str:
         if Path(self.images[index]).exists():
             return self.images[index]
@@ -138,6 +156,36 @@ class PAADataset:
     def __len__(self) -> int:
         return len(self.images)
     
+    def __radd__(self, other: "PAADataset") -> "PAADataset":
+        if other == 0:
+            return self
+        return self.__add__(other)
+
+    def __add__(self, other: "PAADataset") -> "PAADataset":
+        if not isinstance(other, PAADataset):
+            return NotImplemented
+
+        base = copy.deepcopy(self)
+        base.images.extend(other.images)
+        base.labels = np.concat([base.labels, other.labels],
+                                axis=0)
+
+        # Update base's split lookup dict
+        for name in other.splits_name:
+            if not name in base.splits_n2i:
+                base.splits_n2i[name] = len(base.splits_n2i)
+                base.splits_name.append(name)
+
+        # Convert other.splits to base's index
+        cvt_splits = np.array([base.splits_n2i[other.splits_name[split]]
+                        for split in other.splits], dtype=int)
+        
+        # Assign splits
+        base.splits = np.concat(
+            [base.splits, cvt_splits], axis=0)
+
+        return base
+
     @property
     def split_names(self) -> list[str]:
         return self.splits_name
