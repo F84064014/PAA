@@ -54,7 +54,7 @@ class Annotator(QWidget):
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/demo_models/par/shufflenetv2_1.0_finetune4_2.onnx", self.dataset.attributes)
+            "../PAR/demo_models/par/shufflenetv2_1.0_finetune4_3.onnx", self.dataset.attributes)
 
         top_layout = QHBoxLayout()
         top_layout.addStretch()
@@ -71,8 +71,10 @@ class Annotator(QWidget):
 
         self.setLayout(main_layout)
 
-        self._cur_index = 0
+        self._cur_index : int = 0
         self.load_image()
+
+        self.pred : np.ndarray = None
 
     @property
     def cur_index(self):
@@ -95,7 +97,13 @@ class Annotator(QWidget):
         while self._cur_index >= 0 and self._cur_index < len(self.dataset):
             l = self.dataset.get_label(self._cur_index)
             s = self.dataset.get_split(self._cur_index)
-            if (np.logical_and(l, cond_f) == cond_f).all() and (s in cond_s):
+
+            if self.pred is not None:
+                cp = self.filter_pannel.checkPredict(self.pred[self._cur_index])
+            else:
+                cp = True
+
+            if (np.logical_and(l, cond_f) == cond_f).all() and (s in cond_s) and cp:
                 self.cur_index = self._cur_index # Update UI
                 return
             self._cur_index += step
@@ -115,9 +123,14 @@ class Annotator(QWidget):
         )
 
     def load_predict(self):
-        self.model_pannel.updatePredict(
-            self.dataset.get_image(self.cur_index),
-            self.dataset.get_label(self.cur_index))
+        if self.pred is None:
+            self.model_pannel.updatePredict(
+                self.dataset.get_image(self.cur_index),
+                self.dataset.get_label(self.cur_index))
+        else:
+            self.model_pannel.updateProb(self.pred[self.cur_index])
+            self.model_pannel.updateDiff(self.pred[self.cur_index],
+                                         self.dataset.labels[self.cur_index])
 
     def save_image(self, force_split=None):
         label, split = self.attributeLabel.getLabel()
@@ -133,6 +146,16 @@ class Annotator(QWidget):
             self.dataset.save_pth(f"{timestamp}_temp.pth")
         else:
             print("[ERROR] No save format selected")
+
+    def predict_dataset(self, fromfile=False):
+        if fromfile:
+            print("Start loading previous prediction")
+            self.pred = np.load("infer.npy")
+        else:
+            print("Start predicting dataset [This might take times]")
+            self.pred = self.model_pannel.model(self.dataset.image_paths)
+            np.save("infer.npy", self.pred)
+        print("predict_dtaset Done.")
 
     def toggle_filter_panel(self):
         if self.filter_pannel.isVisible():
@@ -217,5 +240,17 @@ class Annotator(QWidget):
         self.save_pth_action.triggered.connect(
             lambda x: self.save_csv_action.setChecked(False))
         file_menu.addAction(self.save_pth_action)
+
+        model_menu = menubar.addMenu("Models")
+
+        self.predict_dataset_action = QAction("predict")
+        self.predict_dataset_action.triggered.connect(
+            lambda x: self.predict_dataset(fromfile=False))
+        model_menu.addAction(self.predict_dataset_action)
+
+        self.load_predict_dataset_action = QAction("load predict")
+        self.load_predict_dataset_action.triggered.connect(
+            lambda x: self.predict_dataset(fromfile=True))
+        model_menu.addAction(self.load_predict_dataset_action)
 
         return menubar

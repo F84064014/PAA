@@ -145,3 +145,7 @@ class PAADataset:
     @property
     def attriubte_names(self) -> list[str]:
         return self.attributes.list()
+    
+    @property
+    def image_paths(self) -> list[str]:
+        return [self.get_image(i) for i in range(len(self.images))]

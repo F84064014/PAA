@@ -56,17 +56,20 @@ class ModelPanel(QWidget):
             group_boxes.append(group_box)
         return group_boxes
 
-    def updatePredict(self, img: str, labels: np.ndarray=None):
+    def updatePredict(self, img: str, labels: np.ndarray = None):
         probs = self.model(img)
+        self.updateProb(probs)
+        self.updateDiff(probs, labels)
+
+    def updateProb(self, probs: np.ndarray):
         for lb, prob in zip(self.pred_lbs, probs):
             color = ModelPanel.prob_to_color(prob)
             lb.setText(f"{prob:.4f}")
             lb.setStyleSheet(f"color: {color};")
 
-        if labels is not None:
-            self.updateDiff(probs, labels)
-
-    def updateDiff(self, probs, labels):
+    def updateDiff(self, probs: np.ndarray, labels: np.ndarray | None):
+        if labels is None:
+            return
         for lb, diff in zip(self.diff_lbs, probs - labels):
             color = ModelPanel.prob_to_color(1-np.abs(diff))
             lb.setText(f"{diff:+.4f}")
