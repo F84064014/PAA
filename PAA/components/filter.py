@@ -40,6 +40,7 @@ class FilterPanel(QWidget):
                 v_layout.setSpacing(5)
 
                 cb = QCheckBox(attr)
+                cb.setTristate(True)
                 cb.setCheckState(Qt.CheckState.Unchecked)
                 self.attr_cbs.append(cb)
 
@@ -105,20 +106,21 @@ class FilterPanel(QWidget):
             pb.setChecked(False)
             cb.setChecked(False)
 
-    def checkPredict(self, prob: np.array) -> bool:
+    def checkPredict(self, prob: np.ndarray) -> bool:
         value = np.array([le.value() for le in self.prob_sbs], dtype=float)
         gt = np.array([pb.text()==">" for pb in self.prob_pbs], dtype=bool)
         lt = np.array([pb.text()=="<" for pb in self.prob_pbs], dtype=bool)
 
-        gt_res = prob[gt] >= value[gt]
-        lt_res = prob[lt] <= value[lt]
+        gt_res = (prob[gt] >= value[gt]).all()
+        lt_res = (prob[lt] <= value[lt]).all()
 
-        return all(gt_res) and all(lt_res)
+        return gt_res and lt_res
 
-    @property
-    def mask(self) -> np.ndarray:
-        return np.array([cb.isChecked() for cb in self.attr_cbs], dtype=int)
-    
-    @property
-    def split(self) -> set:
-        return set([cb.text() for cb in self.split_cbs if cb.isChecked()])
+    def checkLabel(self, label: np.ndarray) -> bool:
+        label = label.astype(np.bool)
+        include = np.array([cb.checkState()==Qt.CheckState.Checked for cb in self.attr_cbs], dtype=bool)
+        exclude = np.array([cb.checkState()==Qt.CheckState.PartiallyChecked for cb in self.attr_cbs], dtype=bool)
+        return all(label[include]) and all(~label[exclude])
+
+    def checkSplit(self, split: str) -> bool:
+        return split in set([cb.text() for cb in self.split_cbs if cb.isChecked()])

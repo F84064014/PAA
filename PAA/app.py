@@ -14,8 +14,9 @@ from .components import (
 from .backend import (
     load_data
 )
-from datetime import datetime
+import os
 import numpy as np
+from datetime import datetime
 
 class Annotator(QWidget):
 
@@ -75,6 +76,7 @@ class Annotator(QWidget):
         self.load_image()
 
         self.pred : np.ndarray = None
+        self.predict_dataset(fromfile=True)
 
     @property
     def cur_index(self):
@@ -91,19 +93,16 @@ class Annotator(QWidget):
         init_index = self._cur_index
         self._cur_index += step
 
-        cond_f = self.filter_pannel.mask
-        cond_s = self.filter_pannel.split
-
         while self._cur_index >= 0 and self._cur_index < len(self.dataset):
             l = self.dataset.get_label(self._cur_index)
             s = self.dataset.get_split(self._cur_index)
 
-            if self.pred is not None:
-                cp = self.filter_pannel.checkPredict(self.pred[self._cur_index])
-            else:
-                cp = True
+            cp = (self.pred is None) or \
+                 self.filter_pannel.checkPredict(self.pred[self._cur_index])
+            cl = self.filter_pannel.checkLabel(l)
+            cs = self.filter_pannel.checkSplit(s)
 
-            if (np.logical_and(l, cond_f) == cond_f).all() and (s in cond_s) and cp:
+            if cl and cs and cp:
                 self.cur_index = self._cur_index # Update UI
                 return
             self._cur_index += step
@@ -150,7 +149,10 @@ class Annotator(QWidget):
     def predict_dataset(self, fromfile=False):
         if fromfile:
             print("Start loading previous prediction")
-            self.pred = np.load("infer.npy")
+            if not os.path.isfile("infer.npy"):
+                print("[ERROR] infer.npy not found")
+            else:
+                self.pred = np.load("infer.npy")
         else:
             print("Start predicting dataset [This might take times]")
             self.pred = self.model_pannel.model(self.dataset.image_paths)
@@ -188,6 +190,7 @@ class Annotator(QWidget):
             self.load_image()
             self.load_predict()
         if event.key() == Qt.Key.Key_S:
+            self.save_image()
             self.save_dataset()
         if event.key() == Qt.Key.Key_Q:
             self.save_image()
@@ -195,16 +198,8 @@ class Annotator(QWidget):
             self.close()
 
         # Clean data
-        if event.key() == Qt.Key.Key_L:
-            self.save_image("low_quality")
-            self.find_next(step=1)
-            self.load_image()
-        if event.key() == Qt.Key.Key_A:
-            self.save_image("ambiguous")
-            self.find_next(step=1)
-            self.load_image()
-        if event.key() == Qt.Key.Key_R:
-            self.save_image("redundant")
+        if event.key() == Qt.Key.Key_I:
+            self.save_image(force_split="ignore")
             self.find_next(step=1)
             self.load_image()
 
