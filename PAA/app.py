@@ -35,7 +35,9 @@ class Annotator(QWidget):
 
         # Loading dataset
         # self.dataset = load_data("data/RealWorld_0421.pth")
-        self.dataset = load_data("data/RealWorld_0422.pth")
+        self.dataset = load_data("data/ExportData_2026_0424.csv")
+        self.dataset.append_split("train")
+        self.dataset.append_split("val")
         self.dataset.append_split("ignore")
 
         self.imageLabel     :ImageLabel
@@ -57,7 +59,7 @@ class Annotator(QWidget):
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/exp/shufflenetv2_1.0_finetune4_4/shufflenetv2_1.0_finetune4_4.onnx", self.dataset.attributes)
+            "../PAR/exp/shufflenetv2_1.0_finetune4_5/shufflenetv2_1.0_finetune4_5.onnx", self.dataset.attributes)
 
         top_layout = QHBoxLayout()
         top_layout.addStretch()
@@ -155,6 +157,9 @@ class Annotator(QWidget):
                 print("[ERROR] infer.npy not found")
             else:
                 self.pred = np.load("infer.npy")
+                if len(self.pred) != len(self.dataset):
+                    print("[ERROR] len(infer.npy)!=len(dataset), failed to load infer.npy")
+                    self.pred = None
         else:
             print("Start predicting dataset [This might take times]")
             self.pred = self.model_pannel.model(self.dataset.image_paths)
@@ -244,7 +249,9 @@ class Annotator(QWidget):
 
         self.export_action = QAction("Export", self)
         self.export_action.triggered.connect(
-            lambda x: self.dataset.export("data/PrivateData"))
+            lambda x: self.dataset.export(
+                f"data/ExportData_{datetime.now().strftime('%Y_%m%d')}",
+                drop=["ignore"]))
         file_menu.addAction(self.export_action)
 
         model_menu = menubar.addMenu("Models")

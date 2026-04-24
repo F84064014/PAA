@@ -105,27 +105,45 @@ class PAADataset:
         rows = list()
         for l, n, s in zip(self.labels, self.images, self.splits):
             sn = self.splits_name[s]
-            line = [n, sn] + list(map(str, l.tolist()))
+            line = [n, sn] + list(map(str, l.astype(int).tolist()))
             rows.append(','.join(line))
 
         with open(path, 'w') as f:
             f.write('\n'.join([colnames] + rows))
 
-    def export(self, path: str):
+    def export(self, path: str, drop: list[str] = []):
+        """
+        path: Directory path of export images and name of meta file
+        drop: List of split name to skip
+        """
         from shutil import copy2
         from pathlib import Path
 
         root = Path(path)
-        root.mkdir(parents=True, exist_ok=False)
+        for split in self.splits_name:
+            if split in drop:
+                continue
+            (root / split).mkdir(parents=True, exist_ok=False)
+
+        indices = list(range(self.__len__()))
+        indices = [i for i in indices if self.get_split(i) not in drop]
+
+        meta : PAADataset = copy.deepcopy(self)
+        meta.labels      = self.labels[indices]
+        meta.images      = list()
+        meta.splits      = self.splits[indices]
 
         print(f"[INFO] Start copying data to {root}")
-        for i in tqdm.tqdm(range(self.__len__())):
-            img_path = Path(self.get_image(i))
+        for i in tqdm.tqdm(range(len(indices))):
+            img_path = Path(self.get_image(indices[i]))
+            split    = self.get_split(indices[i])
+            assert not split in drop, f"found split={split} in {drop}"
 
-            copy2( img_path.as_posix(),
-                   (root / f'{i:08d}.jpg').as_posix())
+            dst_path = root / split / f'{i:08d}{img_path.suffix}'
+            meta.images.append(dst_path.as_posix())
+            copy2( img_path.as_posix(), dst_path.as_posix())
 
-        self.save_pth(root.with_suffix('.pth').as_posix())
+        meta.save_csv(root.with_suffix('.csv').as_posix())
 
     def get_image(self, index=0) -> str:
         if Path(self.images[index]).exists():
