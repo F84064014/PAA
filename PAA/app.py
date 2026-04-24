@@ -1,4 +1,6 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import (
+    Qt
+)
 from PyQt6.QtWidgets import (
     QWidget, QLineEdit, QPushButton,
     QLabel, QHBoxLayout, QVBoxLayout,
@@ -6,7 +8,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import (
     QAction,
-    QCloseEvent
+    QCloseEvent,
 )
 from .components import (
     ImageLabel, AttributeLabel, FilterPanel,
@@ -35,7 +37,7 @@ class Annotator(QWidget):
 
         # Loading dataset
         # self.dataset = load_data("data/RealWorld_0421.pth")
-        self.dataset = load_data("data/ExportData_2026_0424.csv")
+        self.dataset = load_data("data/RealWorld_0424.pth")
         self.dataset.append_split("train")
         self.dataset.append_split("val")
         self.dataset.append_split("ignore")
@@ -59,7 +61,7 @@ class Annotator(QWidget):
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/exp/shufflenetv2_1.0_finetune4_5/shufflenetv2_1.0_finetune4_5.onnx", self.dataset.attributes)
+            "../PAR/exp/shufflenetv2_1.0_CBAM_finetune/shufflenetv2_1.0_CBAM_finetune.onnx", self.dataset.attributes)
 
         top_layout = QHBoxLayout()
         top_layout.addStretch()
@@ -265,5 +267,10 @@ class Annotator(QWidget):
         self.load_predict_dataset_action.triggered.connect(
             lambda x: self.predict_dataset(fromfile=True))
         model_menu.addAction(self.load_predict_dataset_action)
+
+        self.unload_predict_dataset_action = QAction("unload predict")
+        self.unload_predict_dataset_action.triggered.connect(
+            lambda x: setattr(self, 'pred', None))
+        model_menu.addAction(self.unload_predict_dataset_action)
 
         return menubar
