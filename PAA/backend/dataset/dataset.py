@@ -78,6 +78,11 @@ class PAADataset:
         for k, v in self.splits_n2i.items():
             self.splits_name[v] = k
 
+    def new(self, dir_path: str):
+        self.images = list(map(str, Path(dir_path).glob('*')))
+        self.labels = np.zeros((
+            len(self.images), len(self.attributes)), dtype=self.labels.dtype)
+        self.splits = np.full(len(self.images), fill_value=0, dtype=self.splits.dtype)
 
     def validate_path(self):
         for image in self.images:

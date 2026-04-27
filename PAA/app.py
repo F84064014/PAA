@@ -4,7 +4,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtWidgets import (
     QWidget, QLineEdit, QPushButton,
     QLabel, QHBoxLayout, QVBoxLayout,
-    QApplication, QMenuBar
+    QApplication, QMenuBar, QFileDialog
 )
 from PyQt6.QtGui import (
     QAction,
@@ -37,7 +37,8 @@ class Annotator(QWidget):
 
         # Loading dataset
         # self.dataset = load_data("data/RealWorld_0421.pth")
-        self.dataset = load_data("data/RealWorld_0424.pth")
+        # self.dataset = load_data("data/RealWorld_0424.pth")
+        self.dataset = load_data("data/new_0427.csv")
         self.dataset.append_split("train")
         self.dataset.append_split("val")
         self.dataset.append_split("ignore")
@@ -61,7 +62,7 @@ class Annotator(QWidget):
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/exp/shufflenetv2_1.0_CBAM_finetune/shufflenetv2_1.0_CBAM_finetune.onnx", self.dataset.attributes)
+            "../PAR/exp/shufflenetv2_1.0_CBAM_finetune_drop/shufflenetv2_1.0_CBAM_finetune_drop.onnx", self.dataset.attributes)
 
         top_layout = QHBoxLayout()
         top_layout.addStretch()
@@ -168,6 +169,35 @@ class Annotator(QWidget):
             np.save("infer.npy", self.pred)
         print("predict_dtaset Done.")
 
+    def new_dataset(self):
+        dir_path = QFileDialog.getExistingDirectory(self, "Choose images directory", "./")
+        if dir_path:
+            self.dataset.new(dir_path)
+
+        # Overwrite labels
+        self.predict_dataset()
+        self.dataset.labels = (self.pred > 0.5).astype(
+            self.dataset.labels.dtype)
+
+        # Update UI
+        self.cur_index = 0
+        self.load_image()
+        self.total_label.setText(f" / {len(self.dataset)}")
+
+    def open_dataset(self, extend=False):
+        data_path, _ = QFileDialog.getOpenFileName(self, "Choose images .pth / .csv", "./data")
+        if data_path:
+            if extend:
+                self.dataset += load_data(data_path)
+            else:
+                self.dataset = load_data(data_path)
+        self.pred = None
+        self.load_image()
+        self.total_label.setText(f" / {len(self.dataset)}")
+
+    def extend_dataset(self):
+        self.open_dataset(extend=True)
+
     def toggle_filter_panel(self):
         if self.filter_pannel.isVisible():
             self.filter_pannel.hide()
@@ -234,6 +264,21 @@ class Annotator(QWidget):
         menubar = QMenuBar()
 
         file_menu = menubar.addMenu("File")
+
+        self.open_dataset_action = QAction("Open", self)
+        self.open_dataset_action.triggered.connect(
+            self.open_dataset)
+        file_menu.addAction(self.open_dataset_action)
+
+        self.new_dataset_action = QAction("Create New", self)
+        self.new_dataset_action.triggered.connect(
+            self.new_dataset)
+        file_menu.addAction(self.new_dataset_action)
+
+        self.extend_dataset_action = QAction("Extend", self)
+        self.extend_dataset_action.triggered.connect(
+            self.extend_dataset)
+        file_menu.addAction(self.extend_dataset_action)
 
         self.save_csv_action = QAction(".csv", self)
         self.save_csv_action.setCheckable(True)
