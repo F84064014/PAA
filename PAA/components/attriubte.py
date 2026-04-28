@@ -41,11 +41,17 @@ class AttributeLabel(QScrollArea):
         if name in ['Black', 'Blue', 'Brown', 'Green',
                     'Grey', 'Orange', 'Pink', 'Purple',
                     'Red', 'White', 'Yellow']:
+            drak_color = ['Black', 'Blue', 'Purple', 'Red', 'Brown', 'Green']
             cb.setStyleSheet(f"""QCheckBox{{
                                 background-color: {name};
                                 font-weight: bold;
-                                color: {'White' if name in ['Black'] else 'Black'}
-                             }}""")
+                                color: {'White' if name in drak_color else 'Black'};
+                                padding: 6px;
+                             }}
+                             QCheckBox:checked {{
+                                border: 2px solid {'White' if name in drak_color else 'Black'};
+                             }}
+                             """)
 
     def build_split_selector(self, splits: list[str]) -> QGroupBox:
         box = QGroupBox("Partition")

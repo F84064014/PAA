@@ -37,8 +37,7 @@ class Annotator(QWidget):
 
         # Loading dataset
         # self.dataset = load_data("data/RealWorld_0421.pth")
-        # self.dataset = load_data("data/RealWorld_0424.pth")
-        self.dataset = load_data("data/new_0427.csv")
+        self.dataset = load_data("data/RealWorld_0428.pth")
         self.dataset.append_split("train")
         self.dataset.append_split("val")
         self.dataset.append_split("ignore")
@@ -62,7 +61,7 @@ class Annotator(QWidget):
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/exp/shufflenetv2_1.0_CBAM_finetune_drop/shufflenetv2_1.0_CBAM_finetune_drop.onnx", self.dataset.attributes)
+            "../PAR/exp/shufflenetv2_1.0_CBAM_finetune_drop_2/shufflenetv2_1.0_CBAM_finetune_drop_2.onnx", self.dataset.attributes)
 
         top_layout = QHBoxLayout()
         top_layout.addStretch()
@@ -144,14 +143,23 @@ class Annotator(QWidget):
         self.dataset.set_label(self._cur_index, label)
         self.dataset.set_split(self._cur_index, split)
 
-    def save_dataset(self):
+    def save_temp_dataset(self):
         timestamp = datetime.now().strftime("%Y_%m%d_%H%M")
-        if self.save_csv_action.isChecked():
-            self.dataset.save_csv(f"{timestamp}_temp.csv")
-        elif self.save_pth_action.isChecked():
-            self.dataset.save_pth(f"{timestamp}_temp.pth")
+        self.save_dataset(name=f"{timestamp}_temp")
+
+    def save_dataset(self, name: str):
+        base, suffix = os.path.splitext(name)
+        if suffix=='.csv' or self.save_csv_action.isChecked():
+            self.dataset.save_csv(f"{base}.csv")
+        elif suffix=='.pth' or self.save_pth_action.isChecked():
+            self.dataset.save_pth(f"{base}.pth")
         else:
             print("[ERROR] No save format selected")
+
+    def save_as_dataset(self):
+        data_path, _ = QFileDialog.getOpenFileName(
+            self, "Choose images .pth / .csv", "./data")
+        self.save_dataset(data_path)
 
     def predict_dataset(self, fromfile=False):
         if fromfile:
@@ -170,9 +178,12 @@ class Annotator(QWidget):
         print("predict_dtaset Done.")
 
     def new_dataset(self):
-        dir_path = QFileDialog.getExistingDirectory(self, "Choose images directory", "./")
-        if dir_path:
-            self.dataset.new(dir_path)
+        dir_path = QFileDialog.getExistingDirectory(
+            self, "Choose images directory", "./")
+        if not dir_path:
+            return
+
+        self.dataset.new(dir_path)
 
         # Overwrite labels
         self.predict_dataset()
@@ -230,10 +241,10 @@ class Annotator(QWidget):
             self.load_predict()
         if event.key() == Qt.Key.Key_S:
             self.save_image()
-            self.save_dataset()
+            self.save_temp_dataset()
         if event.key() == Qt.Key.Key_Q:
             self.save_image()
-            self.save_dataset()
+            self.save_temp_dataset()
             self.close()
 
         # Clean data
@@ -243,7 +254,7 @@ class Annotator(QWidget):
             self.load_image()
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
-        self.save_dataset()
+        self.save_temp_dataset()
         event.accept()
 
     def buildImageAndAttribute(self) -> QHBoxLayout:
@@ -293,6 +304,11 @@ class Annotator(QWidget):
         self.save_pth_action.triggered.connect(
             lambda x: self.save_csv_action.setChecked(False))
         file_menu.addAction(self.save_pth_action)
+
+        self.save_as_action = QAction("Save As...", self)
+        self.save_as_action.triggered.connect(
+            self.save_as_dataset)
+        file_menu.addAction(self.save_as_action)
 
         self.export_action = QAction("Export", self)
         self.export_action.triggered.connect(
