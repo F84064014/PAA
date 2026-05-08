@@ -175,6 +175,26 @@ class PAADataset:
         else:
             print(f"[Warning] split {split} already exist")
 
+    def drop(self, index) -> None:
+        if isinstance(index, np.ndarray):
+            keep = np.ones(len(self.labels), dtype=bool)
+            keep[index] = False
+            self.labels = self.labels[keep]
+            self.splits = self.splits[keep]
+            self.images = [img for img, k in zip(self.images, keep) if k]
+        elif isinstance(index, int):
+            self.labels = np.concat(self.labels[:index], self.labels[index:])
+            self.splits = np.concat(self.splits[:index], self.splits[index:])
+            self.images = np.concat(self.images[:index], self.images[index:])
+        elif isinstance(index, str):
+            assert index in self.splits_n2i
+            index = self.splits_n2i[index]
+            keeps = [i for i, split_i in enumerate(self.splits) if split_i!=index]
+            self.labels = self.labels[keeps]
+            self.splits = self.splits[keeps]
+            self.images = [self.images[k] for k in keeps]
+        else:
+            raise NotImplementedError("index shoud be [ndarray | int]")
 
     def __len__(self) -> int:
         return len(self.images)

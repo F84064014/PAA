@@ -37,7 +37,7 @@ class Annotator(QWidget):
 
         # Loading dataset
         # self.dataset = load_data("data/RealWorld_0421.pth")
-        self.dataset = load_data("data/RealWorld_0428.pth")
+        self.dataset = load_data("data/RealWorld_0509.pth")
         self.dataset.append_split("train")
         self.dataset.append_split("val")
         self.dataset.append_split("ignore")
@@ -61,7 +61,8 @@ class Annotator(QWidget):
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/exp/shufflenetv2_1.0_CBAM_finetune_drop_2/shufflenetv2_1.0_CBAM_finetune_drop_2.onnx", self.dataset.attributes)
+            "../PAR/exp/shufflenetv2_2.0_CBAM_finetune_contrSAM3_0508_all/shufflenetv2_2.0_CBAM_finetune_contrSAM3_0508_all.onnx", self.dataset.attributes)
+        self.model_pannel.setWindowFlags(Qt.WindowType.Tool)
 
         top_layout = QHBoxLayout()
         top_layout.addStretch()
@@ -205,6 +206,7 @@ class Annotator(QWidget):
         self.pred = None
         self.load_image()
         self.total_label.setText(f" / {len(self.dataset)}")
+        self.dataset.append_split('ignore')
 
     def extend_dataset(self):
         self.open_dataset(extend=True)
