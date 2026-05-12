@@ -5,3 +5,4 @@ PyQt6
 tqdm
 opencv-python
 onnxruntime
+ultralytics
