@@ -6,3 +6,5 @@ tqdm
 opencv-python
 onnxruntime
 ultralytics
+pandas
+seaborn

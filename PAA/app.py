@@ -36,7 +36,7 @@ class Annotator(QWidget):
         self.setFixedSize(1000, 800)
 
         # Loading dataset
-        self.dataset = load_data("data/RealWorld_0509.pth")
+        self.dataset = load_data("data/ExportData_2026_0513.csv")
         self.dataset.append_split("train")
         self.dataset.append_split("val")
         self.dataset.append_split("ignore")
@@ -126,6 +126,7 @@ class Annotator(QWidget):
 
     def load_image(self):
         self.imageLabel.loadImage(self.dataset.get_image(self.cur_index))
+        self.imageLabel.loadMask(self.dataset.get_mask(self.cur_index))
         self.attributeLabel.loadLabel(
             self.dataset.get_label(self.cur_index),
             self.dataset.get_split(self.cur_index),

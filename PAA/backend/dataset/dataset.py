@@ -9,8 +9,9 @@ from .attributes import Attributes
 
 class PAADataset:
     def __init__(self, path: str) -> None:
-        self.path :Path = Path(path).expanduser()
-        self.root :Path = self.path.parent
+        self.path      :Path = Path(path).expanduser()
+        self.root      :Path = self.path.parent
+        self.mask_root :Path = Path('/home/plchu/Experiments/sam3/DataMasks/')
 
         self.attributes  : Attributes = None
         self.labels      : np.ndarray = None
@@ -82,6 +83,7 @@ class PAADataset:
         self.images = list(map(str, Path(dir_path).glob('*')))
         self.labels = np.zeros((
             len(self.images), len(self.attributes)), dtype=self.labels.dtype)
+        self.masks  = None
         self.splits = np.full(len(self.images), fill_value=0, dtype=self.splits.dtype)
 
     def validate_path(self):
@@ -128,7 +130,8 @@ class PAADataset:
         for split in self.splits_name:
             if split in drop:
                 continue
-            (root / split).mkdir(parents=True, exist_ok=False)
+            (root / split / 'image').mkdir(parents=True, exist_ok=False)
+            (root / split / 'mask').mkdir(parents=True, exist_ok=False)
 
         indices = list(range(self.__len__()))
         indices = [i for i in indices if self.get_split(i) not in drop]
@@ -138,16 +141,29 @@ class PAADataset:
         meta.images      = list()
         meta.splits      = self.splits[indices]
 
+        num_images = 0
+        num_masks  = 0
+
         print(f"[INFO] Start copying data to {root}")
         for i in tqdm.tqdm(range(len(indices))):
             img_path = Path(self.get_image(indices[i]))
             split    = self.get_split(indices[i])
             assert not split in drop, f"found split={split} in {drop}"
 
-            dst_path = root / split / f'{i:08d}{img_path.suffix}'
+            dst_path = root / split / 'image' / f'{i:08d}{img_path.suffix}'
             meta.images.append(dst_path.as_posix())
             copy2( img_path.as_posix(), dst_path.as_posix())
+            num_images += 1
 
+            # Handle Mask
+            mask_dst_path = Path(root / split / 'mask' / f'{i:08d}.png')
+            mask_path = img_path.parents[1] / 'mask' / f"{img_path.stem}.png"
+            if mask_path.exists():
+                copy2(mask_path.as_posix(), mask_dst_path.as_posix())
+                num_masks += 1
+
+        print(f"Total number of images = {num_images}")
+        print(f"Total number of masks  = {num_masks}")
         meta.save_csv(root.with_suffix('.csv').as_posix())
 
     def get_image(self, index=0) -> str:
@@ -155,7 +171,15 @@ class PAADataset:
             return self.images[index]
         else:
             return (self.root / self.images[index]).as_posix()
-    
+
+    def get_mask(self, index=0) -> str:
+        '''
+        return path of mask if it exists, None otherwise
+        '''
+        image_path = Path(self.get_image(index))
+        mask_path = image_path.parents[1] / 'mask' / f"{image_path.stem}.png"
+        return mask_path.as_posix() if mask_path.exists() else None
+
     def get_split(self, index=0) -> str:
         return self.splits_name[self.splits[index]]
 
