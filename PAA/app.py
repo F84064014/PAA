@@ -127,6 +127,7 @@ class Annotator(QWidget):
     def load_image(self):
         self.imageLabel.loadImage(self.dataset.get_image(self.cur_index))
         self.imageLabel.loadMask(self.dataset.get_mask(self.cur_index))
+        self.imageLabel.loadFace(self.dataset.get_face(self.cur_index))
         self.attributeLabel.loadLabel(
             self.dataset.get_label(self.cur_index),
             self.dataset.get_split(self.cur_index),

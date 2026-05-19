@@ -5,13 +5,14 @@ import copy
 import tqdm
 import pickle
 import easydict
+import pandas as pd
 from .attributes import Attributes
 
 class PAADataset:
     def __init__(self, path: str) -> None:
         self.path      :Path = Path(path).expanduser()
         self.root      :Path = self.path.parent
-        self.mask_root :Path = Path('/home/plchu/Experiments/sam3/DataMasks/')
+        self.face_root :Path = self.root / self.path.stem / 'face.csv'
 
         self.attributes  : Attributes = None
         self.labels      : np.ndarray = None
@@ -19,6 +20,7 @@ class PAADataset:
         self.splits      : np.ndarray = None
         self.splits_name : list[str]  = None
         self.splits_n2i  : dict[str, int] = None
+        self.faces       : np.ndarray = None
 
         # Load data
         loader = {
@@ -170,6 +172,7 @@ class PAADataset:
         if Path(self.images[index]).exists():
             return self.images[index]
         else:
+            print((self.root / self.images[index]).as_posix())
             return (self.root / self.images[index]).as_posix()
 
     def get_mask(self, index=0) -> str:
@@ -179,6 +182,16 @@ class PAADataset:
         image_path = Path(self.get_image(index))
         mask_path = image_path.parents[1] / 'mask' / f"{image_path.stem}.png"
         return mask_path.as_posix() if mask_path.exists() else None
+
+    def get_face(self, index=0) -> np.ndarray:
+        if self.faces is None:
+            if not self.face_root.exists():
+                print(f"[Warning] no faces at {self.face_root}")
+                return None
+            self.faces = pd.read_csv(self.face_root)
+            self.faces = [np.array([row['x'], row['y'], row['w'], row['h']])
+                          for i, row in self.faces.iterrows()]
+        return self.faces[index]
 
     def get_split(self, index=0) -> str:
         return self.splits_name[self.splits[index]]

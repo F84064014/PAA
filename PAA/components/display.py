@@ -55,6 +55,9 @@ class ImageLabel(QWidget):
     def loadMask(self, mask_path):
         self.image_view.loadMask(mask_path)
 
+    def loadFace(self, face):
+        self.image_view.loadFace(face)
+
 class ImageView(QGraphicsView):
 
     def __init__(self):
@@ -66,6 +69,7 @@ class ImageView(QGraphicsView):
         self.pixmap_item = None
         self.origional_image: np.ndarray = None
         self.origional_mask : np.ndarray = None
+        self.origional_face : np.ndarray = None
 
         self.fixed_size_mode = False
         self.brightness = 1.0
@@ -91,6 +95,12 @@ class ImageView(QGraphicsView):
             return
         self.origional_mask = cv2.imread(mask_path).any(-1)
         self.update_mask()
+
+    def loadFace(self, face: np.ndarray):
+        if face is None:
+            return
+        self.origional_face = face
+        self.update_face()
 
     def update_mask(self):
         mask = self.origional_mask
@@ -121,6 +131,21 @@ class ImageView(QGraphicsView):
         self.mask_item = QGraphicsPixmapItem(pixmap)
         self.mask_item.setZValue(10)
         self.scene.addItem(self.mask_item)
+
+    def update_face(self):
+        face = self.origional_face
+
+        if self.face_item is not None:
+            try:
+                self.scene.removeItem(self.face_item)
+            except RuntimeError:
+                pass
+            self.face_item = None
+
+        self.face_item = QGraphicsRectItem(
+            face[0], face[1], face[2], face[3])
+        self.face_item.setPen(QPen(Qt.GlobalColor.green, 2))
+        self.scene.addItem(self.face_item)
 
     def mousePressEvent(self, event):
 
@@ -165,29 +190,9 @@ class ImageView(QGraphicsView):
             self.mask_item.setVisible(not self.mask_item.isVisible())
 
     def toggle_face_mode(self):
-        if self.mask_item is not None:
-            try:
-                self.scene.removeItem(self.mask_item)
-            except RuntimeError:
-                pass
-            self.mask_item = None
-
         if self.face_item is not None:
             self.face_item.setVisible(not self.face_item.isVisible())
-        else:
-            if not hasattr(self, 'face_model'):
-                import sys
-                sys.path.append("/home/plchu/Experiments/yoloface")
-                from face_detector import YoloDetector
-                self.face_model = YoloDetector(
-                    weights_name="/home/plchu/Experiments/yoloface/yolov5m-face.pt",
-                    config_name="/home/plchu/Experiments/yoloface/models/yolov5m.yaml",
-                    target_size=640, device="cpu", min_face=5)
-            bboxes, points = self.face_model(self.origional_image)
-            bbox = bboxes[0][0]
-            self.face_item = QGraphicsRectItem(bbox[0], bbox[1], bbox[2] - bbox[0], bbox[3] - bbox[1])
-            self.face_item.setPen(QPen(Qt.GlobalColor.green, 2))
-            self.scene.addItem(self.face_item)
+
 
     def set_brightness(self, value):
         self.brightness = value / 100.0
