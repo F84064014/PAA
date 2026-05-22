@@ -1,5 +1,5 @@
 env/
-crops/
+crops*/
 data/
 __pycache__/
 data

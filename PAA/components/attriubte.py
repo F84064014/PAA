@@ -11,12 +11,15 @@ import numpy as np
 class AttributeLabel(QScrollArea):
     def __init__(self, attributes: Attributes, splits: list[str]):
         super().__init__()
-        container:          QWidget               = QWidget()
-        self.layout:        QVBoxLayout           = QVBoxLayout(container)
-        self.cbs:           dict[str, QCheckBox]  = {}
-        self.split_combo:   QComboBox             = None
-        self.index_cbs:     list[QCheckBox]       = [None] * len(attributes)
-        self.cols:          int                   = 4
+        container:          QWidget                  = QWidget()
+        self.layout:        QVBoxLayout              = QVBoxLayout(container)
+        self.cbs:           dict[str, QCheckBox]     = {}
+        self.split_combo:   QComboBox                = None
+        self.index_cbs:     list[QCheckBox]          = [None] * len(attributes)
+        self.cols:          int                      = 4
+        self.lab2state:     dict[int, Qt.CheckState] = {
+            0: Qt.CheckState.Unchecked, 1:Qt.CheckState.Checked, 2: Qt.CheckState.PartiallyChecked}
+        self.state2lab:     dict[Qt.CheckState, int] = {v:k for k,v in self.lab2state.items()}
 
         self.setWidgetResizable(True)
 
@@ -29,13 +32,12 @@ class AttributeLabel(QScrollArea):
     
     def loadLabel(self, label: np.ndarray, split: str):
         for l, cb in zip(label, self.index_cbs):
-            cb.setChecked(l > 0)
+            cb.setCheckState(self.lab2state[l])
         self.split_combo.setCurrentText(split)
 
     def getLabel(self) -> tuple[np.ndarray, str]:
-        label = np.array([cb.isChecked() for cb in self.index_cbs], dtype=int)
         split = self.split_combo.currentText()
-        return (label, split)
+        return (self.label_array, split)
 
     def setCheckboxStyle(self, name: str, cb: QCheckBox):
         if name in ['Black', 'Blue', 'Brown', 'Green',
@@ -71,6 +73,7 @@ class AttributeLabel(QScrollArea):
 
             for i, (idx, attr) in enumerate(attr_list):
                 cb = QCheckBox(attr)
+                cb.setTristate(True)
 
                 self.setCheckboxStyle(attr, cb)
                 cb_key = (group_name, attr, idx)
@@ -86,7 +89,7 @@ class AttributeLabel(QScrollArea):
 
     @property
     def label_array(self) -> np.ndarray:
-        arr = np.array(len(self.cbs), dtype=int)
+        arr = np.zeros(len(self.cbs), dtype=int)
         for (_, _, idx), cb in self.cbs.items():
-            arr[idx] = cb.isChecked()
+            arr[idx] = self.state2lab[cb.checkState()]
         return arr

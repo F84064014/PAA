@@ -53,4 +53,4 @@ images = dataset.image_paths
 
 files, index = find_similar_images(images, threshold=5)
 dataset.drop(np.array(index))
-dataset.save_csv('data/RealWorld_0507_trim.pth')
+dataset.save_pth('data/RealWorld_0507_trim.pth')

@@ -62,7 +62,7 @@ class Annotator(QWidget):
         self.model_btn = QPushButton("Model")
         self.model_btn.clicked.connect(self.toggle_model_panel)
         self.model_pannel = ModelPanel(
-            "../PAR/exp/shufflenetv2_2.0_CBAM_finetune_contrSAM3_0510(2)/shufflenetv2_2.0_CBAM_finetune_contrSAM3_0510_hat.onnx", self.dataset.attributes)
+            "../PAR/exp/shufflenetv2_2.0_CBAM_finetune_contrSAM3_NaiveSeg_0522/shufflenetv2_2.0_CBAM_finetune_contrSAM3_NaiveSeg_0522.onnx", self.dataset.attributes)
         self.model_pannel.setWindowFlags(Qt.WindowType.Tool)
 
         # Data

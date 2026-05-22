@@ -74,7 +74,9 @@ class ImageView(QGraphicsView):
         self.fixed_size_mode = False
         self.brightness = 1.0
         self.mask_item: QGraphicsPixmapItem = None
-        self.face_item  = None
+        self.face_item: QGraphicsRectItem   = None
+        self.mask_visible: bool = False
+        self.face_visible: bool = False
 
         self.start_pos = None
         self.current_rect = None
@@ -130,6 +132,7 @@ class ImageView(QGraphicsView):
 
         self.mask_item = QGraphicsPixmapItem(pixmap)
         self.mask_item.setZValue(10)
+        self.mask_item.setVisible(self.mask_visible)
         self.scene.addItem(self.mask_item)
 
     def update_face(self):
@@ -145,6 +148,7 @@ class ImageView(QGraphicsView):
         self.face_item = QGraphicsRectItem(
             face[0], face[1], face[2], face[3])
         self.face_item.setPen(QPen(Qt.GlobalColor.green, 2))
+        self.face_item.setVisible(self.face_visible)
         self.scene.addItem(self.face_item)
 
     def mousePressEvent(self, event):
@@ -186,13 +190,14 @@ class ImageView(QGraphicsView):
         self.update_mask()
 
     def toggle_mask_mode(self):
+        self.mask_visible = not self.mask_visible
         if self.mask_item is not None:
-            self.mask_item.setVisible(not self.mask_item.isVisible())
+            self.mask_item.setVisible(self.mask_visible)
 
     def toggle_face_mode(self):
+        self.face_visible = not self.face_visible
         if self.face_item is not None:
-            self.face_item.setVisible(not self.face_item.isVisible())
-
+            self.face_item.setVisible(self.face_visible)
 
     def set_brightness(self, value):
         self.brightness = value / 100.0
@@ -217,23 +222,13 @@ class ImageView(QGraphicsView):
         pixmap = QPixmap.fromImage(qimage)
 
         if self.fixed_size_mode:
-
             pixmap = pixmap.scaled(
                 256, 512,
                 Qt.AspectRatioMode.IgnoreAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
+        self.pixmap_item = QGraphicsPixmapItem(pixmap)
 
         self.scene.clear()
-
-        self.pixmap_item = QGraphicsPixmapItem(
-            pixmap
-        )
-
-        self.scene.addItem(
-            self.pixmap_item
-        )
-
-        self.setSceneRect(
-            QRectF(pixmap.rect())
-        )
+        self.scene.addItem(self.pixmap_item)
+        self.setSceneRect(QRectF(pixmap.rect()))
